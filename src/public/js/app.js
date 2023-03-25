@@ -1,1 +1,1 @@
-console.log("hi from app.js");
+const socket = new WebSocket(`ws://${window.location.host}`);
