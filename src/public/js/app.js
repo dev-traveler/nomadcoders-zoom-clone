@@ -3,7 +3,7 @@ const socket = io();
 const myFace = document.getElementById("myFace");
 const muteBtn = document.getElementById("mute");
 const cameraBtn = document.getElementById("camera");
-const camerasSelect = document.getElementById("cameras");
+const cameraSelect = document.getElementById("cameras");
 const call = document.getElementById("call");
 
 call.hidden = true;
@@ -26,7 +26,7 @@ async function getCameras() {
       if (currentCamera.label === camera.label) {
         option.selected = true;
       }
-      camerasSelect.appendChild(option);
+      cameraSelect.appendChild(option);
     });
   } catch (e) {
     console.log(e);
@@ -81,29 +81,30 @@ function handleCameraClick() {
 }
 
 async function handleCameraChange() {
-  await getMedia(camerasSelect.value);
+  await getMedia(cameraSelect.value);
 }
 
 muteBtn.addEventListener("click", handleMuteClick);
 cameraBtn.addEventListener("click", handleCameraClick);
-camerasSelect.addEventListener("input", handleCameraChange);
+cameraSelect.addEventListener("input", handleCameraChange);
 
 // Welcome Form (join a room)
 
 const welcome = document.getElementById("welcome");
 const welcomeForm = welcome.querySelector("form");
 
-async function startMedia() {
+async function initCall() {
   welcome.hidden = true;
   call.hidden = false;
   await getMedia();
   makeConnection();
 }
 
-function handleWelcomeSubmit(event) {
+async function handleWelcomeSubmit(event) {
   event.preventDefault();
   const input = welcomeForm.querySelector("input");
-  socket.emit("join_room", input.value, startMedia);
+  await initCall();
+  socket.emit("join_room", input.value);
   roomName = input.value;
   input.value = "";
 }
@@ -119,8 +120,15 @@ socket.on("welcome", async () => {
   socket.emit("offer", offer, roomName);
 });
 
-socket.on("offer", (offer) => {
-  console.log(offer);
+socket.on("offer", async (offer) => {
+  myPeerConnection.setRemoteDescription(offer);
+  const answer = await myPeerConnection.createAnswer();
+  myPeerConnection.setLocalDescription(answer);
+  socket.emit("answer", answer, roomName);
+});
+
+socket.on("answer", (answer) => {
+  myPeerConnection.setRemoteDescription(answer);
 });
 
 // RTC Code
